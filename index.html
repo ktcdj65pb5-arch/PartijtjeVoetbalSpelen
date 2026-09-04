@@ -30,7 +30,7 @@
     color:var(--ink);
     font-family:"Inter", "Segoe UI", Arial, sans-serif;
     line-height:1.5;
-    position:relative;
+    display:grid;
   }
   .wrap{max-width:1040px;margin:0 auto;padding:0 clamp(28px, 8vw, 80px) clamp(28px, 8vw, 80px);}
 
@@ -40,17 +40,21 @@
     position:relative;
   }
   .hero-photo{
-    position:absolute;
-    right:0;
-    top:0;
-    bottom:0;
+    grid-column:1;
+    grid-row:1;
+    justify-self:end;
+    align-self:stretch;
     width:clamp(220px, 34vw, 420px);
     background-image:url('hero-foto.jpg');
     background-size:cover;
     background-position:center right;
     -webkit-mask-image:linear-gradient(to right, transparent 0%, black 30%);
     mask-image:linear-gradient(to right, transparent 0%, black 30%);
-    z-index:-1;
+  }
+  .page-content{
+    grid-column:1;
+    grid-row:1;
+    min-width:0;
   }
   @media (max-width:760px){
     .hero-photo{display:none;}
@@ -335,6 +339,7 @@
 <body>
 <div class="hero-photo"></div>
 
+<div class="page-content">
 <header class="hero">
   <div class="hero-inner">
     <p class="club-name">S.V. WISSEL</p>
@@ -362,6 +367,7 @@
     </section>
 
   </main>
+</div>
 </div>
 
 <script>
