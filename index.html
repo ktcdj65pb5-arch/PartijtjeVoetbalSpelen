@@ -38,6 +38,23 @@
     color:var(--black);
     padding:34px clamp(28px, 8vw, 80px) 26px;
     position:relative;
+    overflow:hidden;
+  }
+  .hero-photo{
+    position:absolute;
+    right:0;
+    top:0;
+    bottom:0;
+    width:clamp(220px, 34vw, 420px);
+    background-image:url('hero-foto.jpg');
+    background-size:cover;
+    background-position:center right;
+    -webkit-mask-image:linear-gradient(to right, transparent 0%, black 30%);
+    mask-image:linear-gradient(to right, transparent 0%, black 30%);
+    z-index:0;
+  }
+  @media (max-width:760px){
+    .hero-photo{display:none;}
   }
   .hero-inner{max-width:1040px;margin:0 auto;position:relative;z-index:1;}
   .club-name{
@@ -319,6 +336,7 @@
 <body>
 
 <header class="hero">
+  <div class="hero-photo"></div>
   <div class="hero-inner">
     <p class="club-name">S.V. WISSEL</p>
     <h1>Partijtje<br>voetbal spelen</h1>
