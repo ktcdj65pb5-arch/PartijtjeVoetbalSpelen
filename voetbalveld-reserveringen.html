@@ -105,9 +105,12 @@
 
   .datecards{
     display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(230px,1fr));
+    grid-template-columns:repeat(3, minmax(0, 1fr));
     gap:14px;
     margin-bottom:30px;
+  }
+  @media (max-width:680px){
+    .datecards{grid-template-columns:1fr;}
   }
   .datecard{
     background:var(--paper);
