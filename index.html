@@ -95,28 +95,6 @@
   }
   .hero-inner p b{color:var(--black);}
 
-  nav.tabs{
-    display:flex;
-    gap:8px;
-    margin-top:24px;
-  }
-  nav.tabs button{
-    background:transparent;
-    border:1.5px solid var(--black);
-    color:var(--black);
-    padding:8px 16px;
-    border-radius:999px;
-    font-size:13px;
-    font-weight:600;
-    cursor:pointer;
-    font-family:"Inter", sans-serif;
-  }
-  nav.tabs button.active{
-    background:var(--black);
-    color:var(--yellow);
-    border-color:var(--black);
-  }
-
   main{
     background:var(--paper);
     border-radius:16px;
@@ -346,10 +324,6 @@
     <h1>Partijtje<br>voetbal spelen</h1>
     <p class="accent-line">Zie ik jou daar?</p>
     <p>Kies een datum en boek een half of een kwart veld voor jullie partijtje. <b>Ongedwongen plezier</b>, zonder lidmaatschap.</p>
-    <nav class="tabs">
-      <button id="tab-public" class="active">Inschrijven</button>
-      <button id="tab-admin">Beheer</button>
-    </nav>
   </div>
 </header>
 
@@ -862,18 +836,7 @@ async function renderAdmin(){
   });
 }
 
-document.getElementById("tab-public").addEventListener("click", async () => {
-  document.getElementById("tab-public").classList.add("active");
-  document.getElementById("tab-admin").classList.remove("active");
-  document.getElementById("view-public").style.display = "";
-  document.getElementById("view-admin").style.display = "none";
-  await loadPublicData();
-  renderPublic();
-});
-
 async function openAdmin(){
-  document.getElementById("tab-admin").classList.add("active");
-  document.getElementById("tab-public").classList.remove("active");
   document.getElementById("view-admin").style.display = "";
   document.getElementById("view-public").style.display = "none";
   document.getElementById("admin-loading").style.display = "none";
@@ -887,15 +850,14 @@ async function openAdmin(){
   }
 }
 
-document.getElementById("tab-admin").addEventListener("click", openAdmin);
-
 function isBeheerRoute(){
   return /\/beheer\/?$/i.test(window.location.pathname);
 }
 
 (async function init(){
-  if(!isBeheerRoute()){
-    document.getElementById("tab-admin").style.display = "none";
+  if(isBeheerRoute()){
+    await openAdmin();
+    return;
   }
   try{
     await loadPublicData();
@@ -905,10 +867,6 @@ function isBeheerRoute(){
   }
   document.getElementById("public-loading").style.display = "none";
   document.getElementById("public-content").style.display = "";
-  if(isBeheerRoute()){
-    document.getElementById("tab-admin").style.display = "";
-    await openAdmin();
-  }
 })();
 </script>
 
