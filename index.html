@@ -484,8 +484,9 @@ function renderPublic(){
             <input id="f-naam" type="text" placeholder="Voor- en achternaam">
             <div class="err" id="err-naam" style="display:none;"></div>
 
-            <label for="f-team">Teamnaam (optioneel)</label>
+            <label for="f-team">Teamnaam</label>
             <input id="f-team" type="text" placeholder="Bijv. FC De Buren">
+            <div class="err" id="err-team" style="display:none;"></div>
 
             <label for="f-tel">Telefoonnummer</label>
             <input id="f-tel" type="tel" placeholder="06 12345678">
@@ -495,16 +496,18 @@ function renderPublic(){
             <input id="f-aantal" type="number" min="1" step="1" placeholder="Bijv. 10">
             <div class="err" id="err-aantal" style="display:none;"></div>
 
-            <label for="f-email">E-mailadres (optioneel)</label>
+            <label for="f-email">E-mailadres</label>
             <input id="f-email" type="email" placeholder="naam@voorbeeld.nl">
+            <div class="err" id="err-email" style="display:none;"></div>
 
             <label for="f-goal">Doeltjes</label>
             <select id="f-goal">
               ${GOALTJES.map(g => `<option value="${g}">${g}</option>`).join("")}
             </select>
 
-            <label for="f-opm">Opmerking (optioneel)</label>
+            <label for="f-opm">Opmerking</label>
             <textarea id="f-opm" placeholder="Bijv. verwachte aankomsttijd"></textarea>
+            <div class="err" id="err-opm" style="display:none;"></div>
 
             <div class="err" id="err-submit" style="display:none;"></div>
             <button class="btn" id="submit-res">Plek reserveren</button>
@@ -555,11 +558,17 @@ function renderPublic(){
 
 async function handleSubmit(){
   const naamEl = document.getElementById("f-naam");
+  const teamEl = document.getElementById("f-team");
   const telEl = document.getElementById("f-tel");
   const aantalEl = document.getElementById("f-aantal");
+  const emailEl = document.getElementById("f-email");
+  const opmEl = document.getElementById("f-opm");
   const errNaam = document.getElementById("err-naam");
+  const errTeam = document.getElementById("err-team");
   const errTel = document.getElementById("err-tel");
   const errAantal = document.getElementById("err-aantal");
+  const errEmail = document.getElementById("err-email");
+  const errOpm = document.getElementById("err-opm");
   const errSubmit = document.getElementById("err-submit");
 
   let valid = true;
@@ -569,6 +578,13 @@ async function handleSubmit(){
     valid = false;
   } else {
     errNaam.style.display = "none";
+  }
+  if(!teamEl.value.trim()){
+    errTeam.textContent = "Vul een teamnaam in.";
+    errTeam.style.display = "block";
+    valid = false;
+  } else {
+    errTeam.style.display = "none";
   }
   if(!telEl.value.trim()){
     errTel.textContent = "Vul een telefoonnummer in.";
@@ -584,6 +600,25 @@ async function handleSubmit(){
     valid = false;
   } else {
     errAantal.style.display = "none";
+  }
+  const emailWaarde = emailEl.value.trim();
+  if(!emailWaarde){
+    errEmail.textContent = "Vul een e-mailadres in.";
+    errEmail.style.display = "block";
+    valid = false;
+  } else if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailWaarde)){
+    errEmail.textContent = "Vul een geldig e-mailadres in.";
+    errEmail.style.display = "block";
+    valid = false;
+  } else {
+    errEmail.style.display = "none";
+  }
+  if(!opmEl.value.trim()){
+    errOpm.textContent = "Vul een opmerking in.";
+    errOpm.style.display = "block";
+    valid = false;
+  } else {
+    errOpm.style.display = "none";
   }
   if(!valid) return;
 
@@ -611,12 +646,12 @@ async function handleSubmit(){
     tijdsblok: selectedTijdsblok,
     veldtype: veldType,
     naam: naamWaarde,
-    team: document.getElementById("f-team").value.trim() || null,
+    team: teamEl.value.trim(),
     telefoon: telEl.value.trim(),
     aantal_deelnemers: aantal,
-    email: document.getElementById("f-email").value.trim() || null,
+    email: emailWaarde,
     doeltje: document.getElementById("f-goal").value,
-    opmerking: document.getElementById("f-opm").value.trim() || null
+    opmerking: opmEl.value.trim()
   });
 
   if(error){
