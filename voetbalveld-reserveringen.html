@@ -6,6 +6,7 @@
 <title>Veldreservering</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Caveat:wght@600&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   :root{
     --yellow:#F3D02B;
@@ -303,6 +304,11 @@
     margin-top:24px;
     padding-top:18px;
   }
+  .admin-topbar{
+    display:flex;
+    justify-content:flex-end;
+    margin-bottom:14px;
+  }
 </style>
 </head>
 <body>
@@ -337,44 +343,33 @@
 </div>
 
 <script>
-const STORAGE_KEY = "voetbal-veld-boekingen";
-let state = null;
+const SUPABASE_URL = "https://iafvdzctjkpnhfckiefv.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_1u7uikeKm9Na9gnlGE9xjw_MjM5EDC9";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-function uid(){ return Math.random().toString(36).slice(2,10); }
+let dates = [];
+let prices = { half: 25, kwart: 15 };
+let bezetting = {};
+let session = null;
 
-function defaultState(){
-  const dates = [
-    { id: uid(), date: "2026-09-27", units: 4 },
-    { id: uid(), date: "2026-10-11", units: 4 },
-    { id: uid(), date: "2026-11-01", units: 4 }
-  ];
-  return { dates, reservations: [], prices: { half: 25, kwart: 15 }, pin: "1234" };
+const TIJDSBLOKKEN = [
+  { id: "10-11", label: "10:00\u201311:00" },
+  { id: "11-12", label: "11:00\u201312:00" }
+];
+const GOALTJES = ["1x1 meter", "1x3 meter", "2x5 meter"];
+const UNIT_COST = { half: 2, kwart: 1 };
+
+function bezKey(speeldagId, tijdsblok){ return speeldagId + "|" + tijdsblok; }
+
+function remainingUnits(dateObj, tijdsblok){
+  const bezet = bezetting[bezKey(dateObj.id, tijdsblok)] || 0;
+  return dateObj.units - bezet;
 }
-
-async function loadState(){
-  try{
-    const r = await window.storage.get(STORAGE_KEY, true);
-    if(r && r.value){
-      state = JSON.parse(r.value);
-      if(!state.prices){ state.prices = { half: 25, kwart: 15 }; }
-      if(!state.pin){ state.pin = "1234"; }
-      state.dates.forEach(d => {
-        if(typeof d.units !== "number"){ d.units = 4; }
-        delete d.half;
-        delete d.kwart;
-      });
-    } else {
-      state = defaultState();
-      await saveState();
-    }
-  }catch(e){
-    state = defaultState();
-    try{ await saveState(); }catch(e2){}
-  }
+function remainingUnitsDayTotal(dateObj){
+  return TIJDSBLOKKEN.reduce((sum, t) => sum + remainingUnits(dateObj, t.id), 0);
 }
-
-async function saveState(){
-  await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
+function canBook(dateObj, tijdsblok, type){
+  return remainingUnits(dateObj, tijdsblok) >= UNIT_COST[type];
 }
 
 function fmtDate(iso){
@@ -385,27 +380,29 @@ function fmtDateShort(iso){
   const d = new Date(iso + "T12:00:00");
   return d.toLocaleDateString("nl-NL", { weekday:"short" });
 }
+function escapeHtml(str){
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
 
-const TIJDSBLOKKEN = [
-  { id: "10-11", label: "10:00\u201311:00" },
-  { id: "11-12", label: "11:00\u201312:00" }
-];
-const GOALTJES = ["1x1 meter", "1x3 meter", "2x5 meter"];
-const UNIT_COST = { half: 2, kwart: 1 };
+async function loadPublicData(){
+  const [datesRes, pricesRes, bezRes] = await Promise.all([
+    sb.from("speeldagen").select("*").order("datum"),
+    sb.from("prijzen").select("*"),
+    sb.from("bezetting").select("*")
+  ]);
+  if(datesRes.error) throw datesRes.error;
+  if(pricesRes.error) throw pricesRes.error;
+  if(bezRes.error) throw bezRes.error;
 
-function usedUnits(dateId, tijdsblok){
-  return state.reservations
-    .filter(r => r.dateId === dateId && r.tijdsblok === tijdsblok)
-    .reduce((sum, r) => sum + UNIT_COST[r.type], 0);
-}
-function remainingUnits(dateObj, tijdsblok){
-  return dateObj.units - usedUnits(dateObj.id, tijdsblok);
-}
-function remainingUnitsDayTotal(dateObj){
-  return TIJDSBLOKKEN.reduce((sum, t) => sum + remainingUnits(dateObj, t.id), 0);
-}
-function canBook(dateObj, tijdsblok, type){
-  return remainingUnits(dateObj, tijdsblok) >= UNIT_COST[type];
+  dates = datesRes.data.map(d => ({ id: d.id, date: d.datum, units: d.eenheden_per_tijdsblok }));
+  const p = {};
+  pricesRes.data.forEach(row => { p[row.veldtype] = Number(row.bedrag); });
+  prices = p;
+  const b = {};
+  bezRes.data.forEach(row => { b[bezKey(row.speeldag_id, row.tijdsblok)] = row.eenheden_bezet; });
+  bezetting = b;
 }
 
 let selectedDateId = null;
@@ -414,7 +411,6 @@ let selectedType = null;
 
 function renderPublic(){
   const el = document.getElementById("public-content");
-  const dates = state.dates;
 
   let cardsHtml = dates.map(d => {
     const dayLeft = remainingUnitsDayTotal(d);
@@ -434,7 +430,6 @@ function renderPublic(){
 
   let tijdsblokHtml = "";
   let fieldtypeHtml = "";
-  let formHtml = "";
 
   if(selectedDateId){
     const d = dates.find(x => x.id === selectedDateId);
@@ -468,12 +463,12 @@ function renderPublic(){
           <p class="muted" style="margin:-8px 0 16px;">Er is 1 veld, in te delen als 4 kwart-plekken. Een half veld gebruikt er 2. Nu nog ${left} van de ${d.units} vrij.</p>
           <div class="fieldtypes">
             <div class="fieldtype ${selectedType==='half'?'selected':''} ${halfOk?'':'disabled'}" data-type="half">
-              <div class="ft-price">&euro;${state.prices.half}</div>
+              <div class="ft-price">&euro;${prices.half}</div>
               <div class="ft-title">Half veld</div>
               <div class="ft-sub">${halfOk ? 'Beschikbaar' : 'Niet genoeg ruimte meer'}</div>
             </div>
             <div class="fieldtype ${selectedType==='kwart'?'selected':''} ${kwartOk?'':'disabled'}" data-type="kwart">
-              <div class="ft-price">&euro;${state.prices.kwart}</div>
+              <div class="ft-price">&euro;${prices.kwart}</div>
               <div class="ft-title">Kwart veld</div>
               <div class="ft-sub">${kwartOk ? 'Beschikbaar' : 'Volgeboekt'}</div>
             </div>
@@ -506,6 +501,7 @@ function renderPublic(){
             <label for="f-opm">Opmerking (optioneel)</label>
             <textarea id="f-opm" placeholder="Bijv. verwachte aankomsttijd"></textarea>
 
+            <div class="err" id="err-submit" style="display:none;"></div>
             <button class="btn" id="submit-res">Plek reserveren</button>
           </div>
         </div>
@@ -559,6 +555,7 @@ async function handleSubmit(){
   const errNaam = document.getElementById("err-naam");
   const errTel = document.getElementById("err-tel");
   const errAantal = document.getElementById("err-aantal");
+  const errSubmit = document.getElementById("err-submit");
 
   let valid = true;
   if(!naamEl.value.trim()){
@@ -585,46 +582,50 @@ async function handleSubmit(){
   }
   if(!valid) return;
 
-  const d = state.dates.find(x => x.id === selectedDateId);
+  errSubmit.style.display = "none";
+
+  const d = dates.find(x => x.id === selectedDateId);
   if(!canBook(d, selectedTijdsblok, selectedType)){
-    alert("Deze optie is helaas net volgeboekt. Kies een andere optie.");
+    errSubmit.textContent = "Deze optie is helaas net volgeboekt. Kies een andere optie.";
+    errSubmit.style.display = "block";
+    await loadPublicData();
     renderPublic();
     return;
   }
 
   const tijdsblokLabel = TIJDSBLOKKEN.find(t => t.id === selectedTijdsblok).label;
+  const naamWaarde = naamEl.value.trim();
+  const veldType = selectedType;
+  const datumIso = d.date;
 
-  const reservation = {
-    id: uid(),
-    dateId: selectedDateId,
+  const submitBtn = document.getElementById("submit-res");
+  submitBtn.disabled = true;
+
+  const { error } = await sb.from("reserveringen").insert({
+    speeldag_id: selectedDateId,
     tijdsblok: selectedTijdsblok,
-    type: selectedType,
-    naam: naamEl.value.trim(),
-    team: document.getElementById("f-team").value.trim(),
+    veldtype: veldType,
+    naam: naamWaarde,
+    team: document.getElementById("f-team").value.trim() || null,
     telefoon: telEl.value.trim(),
-    aantal: aantal,
-    email: document.getElementById("f-email").value.trim(),
-    goaltje: document.getElementById("f-goal").value,
-    opmerking: document.getElementById("f-opm").value.trim(),
-    createdAt: new Date().toISOString()
-  };
+    aantal_deelnemers: aantal,
+    email: document.getElementById("f-email").value.trim() || null,
+    doeltje: document.getElementById("f-goal").value,
+    opmerking: document.getElementById("f-opm").value.trim() || null
+  });
 
-  state.reservations.push(reservation);
-  try{
-    await saveState();
-  }catch(e){
-    state.reservations.pop();
-    alert("Opslaan is mislukt. Probeer het opnieuw.");
+  if(error){
+    errSubmit.textContent = "Reserveren is niet gelukt: " + (error.message || "onbekende fout") + ". Probeer het opnieuw.";
+    errSubmit.style.display = "block";
+    submitBtn.disabled = false;
+    await loadPublicData();
+    renderPublic();
     return;
   }
 
-  const veldLabel = selectedType === "half" ? "half veld" : "kwart veld";
-  document.getElementById("confirm-box").innerHTML = `
-    <div class="confirm">
-      <b>Gereserveerd</b>
-      ${reservation.naam}, je hebt een ${veldLabel} op ${fmtDate(d.date)} van ${tijdsblokLabel}. Tot dan!
-    </div>
-  `;
+  await loadPublicData();
+
+  const veldLabel = veldType === "half" ? "half veld" : "kwart veld";
   selectedDateId = null;
   selectedTijdsblok = null;
   selectedType = null;
@@ -632,16 +633,60 @@ async function handleSubmit(){
   document.getElementById("confirm-box").innerHTML = `
     <div class="confirm">
       <b>Gereserveerd</b>
-      ${reservation.naam}, je hebt een ${veldLabel} op ${fmtDate(d.date)} van ${tijdsblokLabel}. Tot dan!
+      ${escapeHtml(naamWaarde)}, je hebt een ${veldLabel} op ${fmtDate(datumIso)} van ${tijdsblokLabel}. Tot dan!
     </div>
   `;
 }
 
-function renderAdmin(){
+function renderLoginForm(){
   const el = document.getElementById("admin-content");
+  el.innerHTML = `
+    <div class="card" style="max-width:340px;">
+      <h2>Inloggen</h2>
+      <label for="login-email">E-mailadres</label>
+      <input id="login-email" type="email" placeholder="naam@svwissel.nl">
+      <label for="login-wachtwoord">Wachtwoord</label>
+      <input id="login-wachtwoord" type="password" placeholder="••••••••">
+      <div class="err" id="err-login" style="display:none;"></div>
+      <button class="btn" id="login-submit">Inloggen</button>
+    </div>
+  `;
+  const doLogin = async () => {
+    const email = document.getElementById("login-email").value.trim();
+    const wachtwoord = document.getElementById("login-wachtwoord").value;
+    const err = document.getElementById("err-login");
+    err.style.display = "none";
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: wachtwoord });
+    if(error){
+      err.textContent = "Inloggen mislukt: " + error.message;
+      err.style.display = "block";
+      return;
+    }
+    session = data.session;
+    await renderAdmin();
+  };
+  document.getElementById("login-submit").addEventListener("click", doLogin);
+  document.getElementById("login-wachtwoord").addEventListener("keydown", (e) => {
+    if(e.key === "Enter") doLogin();
+  });
+}
 
-  const datesHtml = state.dates.map(d => {
-    const resForDate = state.reservations.filter(r => r.dateId === d.id);
+async function renderAdmin(){
+  const el = document.getElementById("admin-content");
+  el.innerHTML = `<div class="muted" style="padding:20px 0;">Gegevens laden…</div>`;
+
+  const { data: resData, error: resError } = await sb
+    .from("reserveringen")
+    .select("*")
+    .order("created_at");
+
+  if(resError){
+    el.innerHTML = `<div class="card"><p class="err" style="display:block;">Kon reserveringen niet laden: ${escapeHtml(resError.message)}</p></div>`;
+    return;
+  }
+
+  const datesHtml = dates.map(d => {
+    const resForDate = resData.filter(r => r.speeldag_id === d.id);
     const rowsHtml = resForDate.length ? `
       <table class="res">
         <tr><th>Naam</th><th>Team</th><th>Tijd</th><th>Type</th><th>Aantal</th><th>Doeltje</th><th>Telefoon</th><th>E-mail</th><th></th></tr>
@@ -650,9 +695,9 @@ function renderAdmin(){
             <td>${escapeHtml(r.naam)}</td>
             <td>${escapeHtml(r.team || "—")}</td>
             <td>${(TIJDSBLOKKEN.find(t => t.id === r.tijdsblok) || {}).label || "—"}</td>
-            <td>${r.type === "half" ? "Half veld" : "Kwart veld"}</td>
-            <td>${r.aantal || "—"}</td>
-            <td>${escapeHtml(r.goaltje || "—")}</td>
+            <td>${r.veldtype === "half" ? "Half veld" : "Kwart veld"}</td>
+            <td>${r.aantal_deelnemers || "—"}</td>
+            <td>${escapeHtml(r.doeltje || "—")}</td>
             <td>${escapeHtml(r.telefoon)}</td>
             <td>${escapeHtml(r.email || "—")}</td>
             <td><button class="btn secondary" data-remove-res="${r.id}">Verwijderen</button></td>
@@ -679,20 +724,21 @@ function renderAdmin(){
   }).join("");
 
   el.innerHTML = `
+    <div class="admin-topbar">
+      <button class="btn secondary" id="logout-btn">Uitloggen</button>
+    </div>
     <div class="card">
-      <h2>Prijzen en pincode</h2>
+      <h2>Prijzen</h2>
       <div class="row" style="grid-template-columns:1fr 1fr;">
         <div>
           <label>Kwart veld (&euro;)</label>
-          <input type="number" min="0" id="price-kwart" value="${state.prices.kwart}">
+          <input type="number" min="0" id="price-kwart" value="${prices.kwart}">
         </div>
         <div>
           <label>Half veld (&euro;)</label>
-          <input type="number" min="0" id="price-half" value="${state.prices.half}">
+          <input type="number" min="0" id="price-half" value="${prices.half}">
         </div>
       </div>
-      <label for="pin-change">Beheer-pincode</label>
-      <input type="text" id="pin-change" value="${state.pin}" inputmode="numeric">
     </div>
     <div class="card">
       <h2>Data en capaciteit</h2>
@@ -700,35 +746,38 @@ function renderAdmin(){
       ${datesHtml}
     </div>
     <div class="danger-zone">
-      <button class="btn secondary" id="reset-all">Alles wissen en opnieuw beginnen</button>
+      <button class="btn secondary" id="reset-all">Alle reserveringen wissen</button>
     </div>
   `;
 
+  document.getElementById("logout-btn").addEventListener("click", async () => {
+    await sb.auth.signOut();
+    session = null;
+    renderLoginForm();
+  });
+
   document.getElementById("price-kwart").addEventListener("change", async (e) => {
-    state.prices.kwart = Math.max(0, parseInt(e.target.value || "0", 10));
-    await saveState();
+    const bedrag = Math.max(0, parseInt(e.target.value || "0", 10));
+    await sb.from("prijzen").update({ bedrag }).eq("veldtype", "kwart");
+    await loadPublicData();
   });
   document.getElementById("price-half").addEventListener("change", async (e) => {
-    state.prices.half = Math.max(0, parseInt(e.target.value || "0", 10));
-    await saveState();
-  });
-  document.getElementById("pin-change").addEventListener("change", async (e) => {
-    const val = e.target.value.trim();
-    state.pin = val || "1234";
-    await saveState();
+    const bedrag = Math.max(0, parseInt(e.target.value || "0", 10));
+    await sb.from("prijzen").update({ bedrag }).eq("veldtype", "half");
+    await loadPublicData();
   });
 
   el.querySelectorAll("[data-field]").forEach(inp => {
     inp.addEventListener("change", async () => {
       const dateId = inp.closest(".admin-date").getAttribute("data-date-id");
-      const d = state.dates.find(x => x.id === dateId);
       const field = inp.getAttribute("data-field");
       if(field === "date"){
-        d.date = inp.value;
+        await sb.from("speeldagen").update({ datum: inp.value }).eq("id", dateId);
       } else {
-        d[field] = Math.max(0, parseInt(inp.value || "0", 10));
+        const val = Math.max(0, parseInt(inp.value || "0", 10));
+        await sb.from("speeldagen").update({ eenheden_per_tijdsblok: val }).eq("id", dateId);
       }
-      await saveState();
+      await loadPublicData();
       renderAdmin();
     });
   });
@@ -736,62 +785,28 @@ function renderAdmin(){
   el.querySelectorAll("[data-remove-res]").forEach(btn => {
     btn.addEventListener("click", async () => {
       const id = btn.getAttribute("data-remove-res");
-      state.reservations = state.reservations.filter(r => r.id !== id);
-      await saveState();
+      await sb.from("reserveringen").delete().eq("id", id);
+      await loadPublicData();
       renderAdmin();
     });
   });
 
   document.getElementById("reset-all").addEventListener("click", async () => {
-    if(!confirm("Weet je zeker dat je alle data en reserveringen wilt wissen?")) return;
-    state = defaultState();
-    await saveState();
+    if(!confirm("Weet je zeker dat je alle reserveringen wilt wissen? De speeldata en prijzen blijven staan.")) return;
+    await sb.from("reserveringen").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    await loadPublicData();
     renderAdmin();
   });
 }
 
-function escapeHtml(str){
-  const d = document.createElement("div");
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-document.getElementById("tab-public").addEventListener("click", () => {
+document.getElementById("tab-public").addEventListener("click", async () => {
   document.getElementById("tab-public").classList.add("active");
   document.getElementById("tab-admin").classList.remove("active");
   document.getElementById("view-public").style.display = "";
   document.getElementById("view-admin").style.display = "none";
+  await loadPublicData();
+  renderPublic();
 });
-
-let adminUnlocked = false;
-
-function renderAdminGate(){
-  const el = document.getElementById("admin-content");
-  el.innerHTML = `
-    <div class="card" style="max-width:320px;">
-      <h2>Pincode</h2>
-      <label for="pin-input">Voer de beheer-pincode in</label>
-      <input id="pin-input" type="password" inputmode="numeric" placeholder="••••">
-      <div class="err" id="err-pin" style="display:none;"></div>
-      <button class="btn" id="pin-submit">Ontgrendelen</button>
-    </div>
-  `;
-  const check = async () => {
-    const val = document.getElementById("pin-input").value.trim();
-    if(val === state.pin){
-      adminUnlocked = true;
-      renderAdmin();
-    } else {
-      const err = document.getElementById("err-pin");
-      err.textContent = "Onjuiste pincode.";
-      err.style.display = "block";
-    }
-  };
-  document.getElementById("pin-submit").addEventListener("click", check);
-  document.getElementById("pin-input").addEventListener("keydown", (e) => {
-    if(e.key === "Enter") check();
-  });
-}
 
 document.getElementById("tab-admin").addEventListener("click", async () => {
   document.getElementById("tab-admin").classList.add("active");
@@ -800,16 +815,22 @@ document.getElementById("tab-admin").addEventListener("click", async () => {
   document.getElementById("view-public").style.display = "none";
   document.getElementById("admin-loading").style.display = "none";
   document.getElementById("admin-content").style.display = "";
-  if(adminUnlocked){
+  const { data: { session: currentSession } } = await sb.auth.getSession();
+  session = currentSession;
+  if(session){
     renderAdmin();
   } else {
-    renderAdminGate();
+    renderLoginForm();
   }
 });
 
 (async function init(){
-  await loadState();
-  renderPublic();
+  try{
+    await loadPublicData();
+    renderPublic();
+  }catch(e){
+    document.getElementById("public-loading").textContent = "Kon gegevens niet laden. Probeer de pagina te vernieuwen.";
+  }
   document.getElementById("public-loading").style.display = "none";
   document.getElementById("public-content").style.display = "";
 })();
