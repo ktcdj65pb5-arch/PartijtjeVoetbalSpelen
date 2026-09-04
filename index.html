@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veldreservering</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Caveat:wght@600&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --yellow:#F3D02B;
+    --yellow-deep:#E5BE12;
+    --black:#141210;
+    --paper:#FFFFFF;
+    --ink:#1A1712;
+    --ink-soft:#5C5646;
+    --accent:#F3D02B;
+    --line:#E3D68A;
+    --danger:#B4432E;
+    --danger-bg:#FBEAE5;
+    --ok:#1F6B3B;
+    --ok-bg:#E7F1EA;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--yellow);
+    color:var(--ink);
+    font-family:"Inter", "Segoe UI", Arial, sans-serif;
+    line-height:1.5;
+  }
+  .wrap{max-width:880px;margin:0 auto;padding:0 clamp(28px, 8vw, 80px) 60px;}
+
+  header.hero{
+    background:var(--yellow);
+    color:var(--black);
+    padding:34px clamp(28px, 8vw, 80px) 26px;
+    position:relative;
+  }
+  .hero-inner{max-width:880px;margin:0 auto;position:relative;z-index:1;}
+  .club-name{
+    font-family:"Inter", sans-serif;
+    font-weight:700;
+    letter-spacing:1px;
+    font-size:14px;
+    margin:0 0 14px;
+  }
+  .hero-inner h1{
+    font-family:"Anton", "Arial Narrow", Arial, sans-serif;
+    font-weight:400;
+    font-size:38px;
+    line-height:0.98;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    background:var(--black);
+    color:var(--yellow);
+    display:inline-block;
+    padding:10px 16px;
+    margin:0 0 10px;
+  }
+  .hero-inner .accent-line{
+    font-family:"Caveat", cursive;
+    font-size:24px;
+    font-weight:600;
+    margin:0 0 16px;
+    transform:rotate(-1.5deg);
+  }
+  .hero-inner p{
+    margin:0;
+    color:var(--ink);
+    font-size:15px;
+    max-width:520px;
+  }
+  .hero-inner p b{color:var(--black);}
+
+  nav.tabs{
+    display:flex;
+    gap:8px;
+    margin-top:24px;
+  }
+  nav.tabs button{
+    background:transparent;
+    border:1.5px solid var(--black);
+    color:var(--black);
+    padding:8px 16px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:"Inter", sans-serif;
+  }
+  nav.tabs button.active{
+    background:var(--black);
+    color:var(--yellow);
+    border-color:var(--black);
+  }
+
+  main{padding-top:30px;}
+
+  main{background:var(--paper);}
+
+  .datecards{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(230px,1fr));
+    gap:14px;
+    margin-bottom:30px;
+  }
+  .datecard{
+    background:var(--paper);
+    border:2px solid var(--black);
+    border-radius:var(--radius);
+    padding:16px;
+    cursor:pointer;
+    transition:background 0.15s;
+  }
+  .datecard:hover{background:#FFFBEB;}
+  .datecard.selected{
+    background:var(--black);
+    color:var(--yellow);
+  }
+  .datecard.selected .full-date{color:#D9CFA6;}
+  .datecard .day{
+    font-family:"Anton", Arial, sans-serif;
+    font-weight:400;
+    font-size:22px;
+    text-transform:uppercase;
+    margin-bottom:2px;
+  }
+  .datecard .full-date{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin-bottom:14px;
+  }
+  .slotrow{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:13px;
+    padding:6px 0;
+    border-top:1px dashed var(--line);
+  }
+  .datecard.selected .slotrow{border-top:1px dashed #4A4633;}
+  .datecard.selected .slot-label{color:#D9CFA6;}
+  .slotrow:first-of-type{border-top:1px dashed var(--line);}
+  .slot-label{color:var(--ink-soft);}
+  .slot-count{
+    font-weight:700;
+    padding:2px 9px;
+    border-radius:999px;
+    background:var(--ok-bg);
+    color:var(--ok);
+  }
+  .slot-count.empty{
+    background:var(--danger-bg);
+    color:var(--danger);
+  }
+
+  .card{
+    background:var(--paper);
+    border:2px solid var(--black);
+    border-radius:var(--radius);
+    padding:22px;
+    margin-bottom:20px;
+  }
+  .card h2{
+    font-family:"Anton", Arial, sans-serif;
+    font-weight:400;
+    text-transform:uppercase;
+    font-size:20px;
+    margin:0 0 16px;
+  }
+
+  .fieldtypes{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+  .fieldtype{
+    flex:1;
+    min-width:160px;
+    border:2px solid var(--black);
+    border-radius:var(--radius);
+    padding:14px;
+    cursor:pointer;
+    position:relative;
+  }
+  .fieldtype.selected{background:var(--yellow);}
+  .fieldtype.disabled{opacity:0.4;cursor:not-allowed;}
+  .fieldtype .ft-title{font-weight:700;font-size:14px;margin-bottom:2px;}
+  .fieldtype .ft-sub{font-size:12px;color:var(--ink-soft);}
+  .fieldtype .ft-price{
+    position:absolute;
+    top:10px; right:12px;
+    font-family:"Anton", Arial, sans-serif;
+    font-size:18px;
+  }
+
+  label{
+    display:block;
+    font-size:13px;
+    color:var(--ink-soft);
+    margin:14px 0 5px;
+    font-weight:600;
+  }
+  input, textarea{
+    width:100%;
+    padding:9px 11px;
+    border:1.5px solid var(--line);
+    border-radius:6px;
+    font-size:14px;
+    font-family:inherit;
+    color:var(--ink);
+    background:var(--paper);
+  }
+  input:focus, textarea:focus{
+    outline:none;
+    border-color:var(--black);
+  }
+  textarea{resize:vertical;min-height:60px;}
+
+  .err{
+    color:var(--danger);
+    font-size:12.5px;
+    margin-top:5px;
+  }
+
+  .btn{
+    display:inline-block;
+    background:var(--black);
+    color:var(--yellow);
+    border:none;
+    padding:11px 22px;
+    border-radius:6px;
+    font-size:14px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.3px;
+    cursor:pointer;
+    margin-top:20px;
+    font-family:"Inter", sans-serif;
+  }
+  .btn:hover{background:#332E24;}
+  .btn.secondary{
+    background:transparent;
+    color:var(--danger);
+    border:1px solid var(--danger);
+    padding:6px 12px;
+    font-size:12.5px;
+    margin-top:0;
+    text-transform:none;
+    font-weight:600;
+  }
+  .btn.small{
+    padding:6px 14px;
+    font-size:13px;
+    margin-top:0;
+  }
+
+  .confirm{
+    background:var(--black);
+    color:var(--yellow);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    margin-bottom:20px;
+    font-size:14px;
+  }
+  .confirm b{
+    display:block;
+    font-family:"Anton", Arial, sans-serif;
+    font-weight:400;
+    text-transform:uppercase;
+    font-size:17px;
+    margin-bottom:4px;
+  }
+
+  .admin-date{
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .admin-date .row{
+    display:grid;
+    grid-template-columns:1fr 1fr 100px 100px;
+    gap:10px;
+    align-items:end;
+  }
+  .admin-date .row label{margin-top:0;}
+  table.res{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px;}
+  table.res th{
+    text-align:left;
+    color:var(--ink-soft);
+    font-weight:600;
+    padding:6px 8px;
+    border-bottom:1px solid var(--line);
+  }
+  table.res td{
+    padding:8px;
+    border-bottom:1px solid var(--line);
+    vertical-align:top;
+  }
+  .empty-msg{color:var(--ink-soft);font-size:13px;padding:8px 0;}
+  .muted{color:var(--ink-soft);font-size:12.5px;}
+  .danger-zone{
+    border-top:1px dashed var(--line);
+    margin-top:24px;
+    padding-top:18px;
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <p class="club-name">S.V. WISSEL</p>
+    <h1>Partijtje<br>voetbal spelen</h1>
+    <p class="accent-line">Zie ik jou daar?</p>
+    <p>Kies een datum en boek een half of een kwart veld voor jullie partijtje. <b>Ongedwongen plezier</b>, zonder lidmaatschap.</p>
+    <nav class="tabs">
+      <button id="tab-public" class="active">Inschrijven</button>
+      <button id="tab-admin">Beheer</button>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <main>
+
+    <section id="view-public">
+      <div id="public-loading" class="muted" style="padding:30px 0;">Beschikbaarheid laden…</div>
+      <div id="public-content" style="display:none;"></div>
+    </section>
+
+    <section id="view-admin" style="display:none;">
+      <div id="admin-loading" class="muted" style="padding:30px 0;">Gegevens laden…</div>
+      <div id="admin-content" style="display:none;"></div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+const STORAGE_KEY = "voetbal-veld-boekingen";
+let state = null;
+
+function uid(){ return Math.random().toString(36).slice(2,10); }
+
+function defaultState(){
+  const dates = [
+    { id: uid(), date: "2026-09-27", units: 4 },
+    { id: uid(), date: "2026-10-11", units: 4 },
+    { id: uid(), date: "2026-11-01", units: 4 }
+  ];
+  return { dates, reservations: [], prices: { half: 25, kwart: 15 } };
+}
+
+async function loadState(){
+  try{
+    const r = await window.storage.get(STORAGE_KEY, true);
+    if(r && r.value){
+      state = JSON.parse(r.value);
+      if(!state.prices){ state.prices = { half: 25, kwart: 15 }; }
+      state.dates.forEach(d => {
+        if(typeof d.units !== "number"){ d.units = 4; }
+        delete d.half;
+        delete d.kwart;
+      });
+    } else {
+      state = defaultState();
+      await saveState();
+    }
+  }catch(e){
+    state = defaultState();
+    try{ await saveState(); }catch(e2){}
+  }
+}
+
+async function saveState(){
+  await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
+}
+
+function fmtDate(iso){
+  const d = new Date(iso + "T12:00:00");
+  return d.toLocaleDateString("nl-NL", { weekday:"long", day:"numeric", month:"long" });
+}
+function fmtDateShort(iso){
+  const d = new Date(iso + "T12:00:00");
+  return d.toLocaleDateString("nl-NL", { weekday:"short" });
+}
+
+const TIJDSBLOKKEN = [
+  { id: "10-11", label: "10:00\u201311:00" },
+  { id: "11-12", label: "11:00\u201312:00" }
+];
+const GOALTJES = ["1x1 meter", "1x3 meter", "2x5 meter"];
+const UNIT_COST = { half: 2, kwart: 1 };
+
+function usedUnits(dateId, tijdsblok){
+  return state.reservations
+    .filter(r => r.dateId === dateId && r.tijdsblok === tijdsblok)
+    .reduce((sum, r) => sum + UNIT_COST[r.type], 0);
+}
+function remainingUnits(dateObj, tijdsblok){
+  return dateObj.units - usedUnits(dateObj.id, tijdsblok);
+}
+function remainingUnitsDayTotal(dateObj){
+  return TIJDSBLOKKEN.reduce((sum, t) => sum + remainingUnits(dateObj, t.id), 0);
+}
+function canBook(dateObj, tijdsblok, type){
+  return remainingUnits(dateObj, tijdsblok) >= UNIT_COST[type];
+}
+
+let selectedDateId = null;
+let selectedTijdsblok = null;
+let selectedType = null;
+
+function renderPublic(){
+  const el = document.getElementById("public-content");
+  const dates = state.dates;
+
+  let cardsHtml = dates.map(d => {
+    const dayLeft = remainingUnitsDayTotal(d);
+    const dayTotal = d.units * TIJDSBLOKKEN.length;
+    const sel = d.id === selectedDateId ? "selected" : "";
+    return `
+      <div class="datecard ${sel}" data-date-id="${d.id}">
+        <div class="day">${fmtDateShort(d.date)}</div>
+        <div class="full-date">${fmtDate(d.date)}</div>
+        <div class="slotrow">
+          <span class="slot-label">Beschikbaar deze dag</span>
+          <span class="slot-count ${dayLeft<=0?'empty':''}">${dayLeft<=0 ? 'vol' : dayLeft + '/' + dayTotal + ' kwart-plekken'}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  let tijdsblokHtml = "";
+  let fieldtypeHtml = "";
+  let formHtml = "";
+
+  if(selectedDateId){
+    const d = dates.find(x => x.id === selectedDateId);
+
+    tijdsblokHtml = `
+      <div class="card">
+        <h2>Kies het tijdsblok — ${fmtDate(d.date)}</h2>
+        <div class="fieldtypes">
+          ${TIJDSBLOKKEN.map(t => {
+            const left = remainingUnits(d, t.id);
+            const sel = selectedTijdsblok === t.id ? "selected" : "";
+            const dis = left > 0 ? "" : "disabled";
+            return `
+              <div class="fieldtype ${sel} ${dis}" data-tijdsblok="${t.id}">
+                <div class="ft-title">${t.label}</div>
+                <div class="ft-sub">${left > 0 ? left + " van de " + d.units + " kwart-plekken vrij" : "Volgeboekt"}</div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+
+    if(selectedTijdsblok){
+      const left = remainingUnits(d, selectedTijdsblok);
+      const halfOk = canBook(d, selectedTijdsblok, "half");
+      const kwartOk = canBook(d, selectedTijdsblok, "kwart");
+      fieldtypeHtml = `
+        <div class="card">
+          <h2>Kies het veld</h2>
+          <p class="muted" style="margin:-8px 0 16px;">Er is 1 veld, in te delen als 4 kwart-plekken. Een half veld gebruikt er 2. Nu nog ${left} van de ${d.units} vrij.</p>
+          <div class="fieldtypes">
+            <div class="fieldtype ${selectedType==='half'?'selected':''} ${halfOk?'':'disabled'}" data-type="half">
+              <div class="ft-price">&euro;${state.prices.half}</div>
+              <div class="ft-title">Half veld</div>
+              <div class="ft-sub">${halfOk ? 'Beschikbaar' : 'Niet genoeg ruimte meer'}</div>
+            </div>
+            <div class="fieldtype ${selectedType==='kwart'?'selected':''} ${kwartOk?'':'disabled'}" data-type="kwart">
+              <div class="ft-price">&euro;${state.prices.kwart}</div>
+              <div class="ft-title">Kwart veld</div>
+              <div class="ft-sub">${kwartOk ? 'Beschikbaar' : 'Volgeboekt'}</div>
+            </div>
+          </div>
+
+          <div id="reg-form" style="${selectedType ? '' : 'display:none;'}">
+            <label for="f-naam">Naam</label>
+            <input id="f-naam" type="text" placeholder="Voor- en achternaam">
+            <div class="err" id="err-naam" style="display:none;"></div>
+
+            <label for="f-team">Teamnaam (optioneel)</label>
+            <input id="f-team" type="text" placeholder="Bijv. FC De Buren">
+
+            <label for="f-tel">Telefoonnummer</label>
+            <input id="f-tel" type="tel" placeholder="06 12345678">
+            <div class="err" id="err-tel" style="display:none;"></div>
+
+            <label for="f-email">E-mailadres (optioneel)</label>
+            <input id="f-email" type="email" placeholder="naam@voorbeeld.nl">
+
+            <label for="f-goal">Doeltjes</label>
+            <select id="f-goal">
+              ${GOALTJES.map(g => `<option value="${g}">${g}</option>`).join("")}
+            </select>
+
+            <label for="f-opm">Opmerking (optioneel)</label>
+            <textarea id="f-opm" placeholder="Bijv. verwachte aankomsttijd"></textarea>
+
+            <button class="btn" id="submit-res">Plek reserveren</button>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  el.innerHTML = `
+    <div id="confirm-box"></div>
+    <div class="datecards">${cardsHtml}</div>
+    ${tijdsblokHtml}
+    ${fieldtypeHtml}
+  `;
+
+  el.querySelectorAll(".datecard").forEach(c => {
+    c.addEventListener("click", () => {
+      selectedDateId = c.getAttribute("data-date-id");
+      selectedTijdsblok = null;
+      selectedType = null;
+      renderPublic();
+    });
+  });
+
+  el.querySelectorAll("[data-tijdsblok]").forEach(c => {
+    c.addEventListener("click", () => {
+      if(c.classList.contains("disabled")) return;
+      selectedTijdsblok = c.getAttribute("data-tijdsblok");
+      selectedType = null;
+      renderPublic();
+    });
+  });
+
+  el.querySelectorAll("[data-type]").forEach(c => {
+    c.addEventListener("click", () => {
+      if(c.classList.contains("disabled")) return;
+      selectedType = c.getAttribute("data-type");
+      renderPublic();
+    });
+  });
+
+  const submitBtn = document.getElementById("submit-res");
+  if(submitBtn){
+    submitBtn.addEventListener("click", handleSubmit);
+  }
+}
+
+async function handleSubmit(){
+  const naamEl = document.getElementById("f-naam");
+  const telEl = document.getElementById("f-tel");
+  const errNaam = document.getElementById("err-naam");
+  const errTel = document.getElementById("err-tel");
+
+  let valid = true;
+  if(!naamEl.value.trim()){
+    errNaam.textContent = "Vul een naam in.";
+    errNaam.style.display = "block";
+    valid = false;
+  } else {
+    errNaam.style.display = "none";
+  }
+  if(!telEl.value.trim()){
+    errTel.textContent = "Vul een telefoonnummer in.";
+    errTel.style.display = "block";
+    valid = false;
+  } else {
+    errTel.style.display = "none";
+  }
+  if(!valid) return;
+
+  const d = state.dates.find(x => x.id === selectedDateId);
+  if(!canBook(d, selectedTijdsblok, selectedType)){
+    alert("Deze optie is helaas net volgeboekt. Kies een andere optie.");
+    renderPublic();
+    return;
+  }
+
+  const tijdsblokLabel = TIJDSBLOKKEN.find(t => t.id === selectedTijdsblok).label;
+
+  const reservation = {
+    id: uid(),
+    dateId: selectedDateId,
+    tijdsblok: selectedTijdsblok,
+    type: selectedType,
+    naam: naamEl.value.trim(),
+    team: document.getElementById("f-team").value.trim(),
+    telefoon: telEl.value.trim(),
+    email: document.getElementById("f-email").value.trim(),
+    goaltje: document.getElementById("f-goal").value,
+    opmerking: document.getElementById("f-opm").value.trim(),
+    createdAt: new Date().toISOString()
+  };
+
+  state.reservations.push(reservation);
+  try{
+    await saveState();
+  }catch(e){
+    state.reservations.pop();
+    alert("Opslaan is mislukt. Probeer het opnieuw.");
+    return;
+  }
+
+  const veldLabel = selectedType === "half" ? "half veld" : "kwart veld";
+  document.getElementById("confirm-box").innerHTML = `
+    <div class="confirm">
+      <b>Gereserveerd</b>
+      ${reservation.naam}, je hebt een ${veldLabel} op ${fmtDate(d.date)} van ${tijdsblokLabel}. Tot dan!
+    </div>
+  `;
+  selectedDateId = null;
+  selectedTijdsblok = null;
+  selectedType = null;
+  renderPublic();
+  document.getElementById("confirm-box").innerHTML = `
+    <div class="confirm">
+      <b>Gereserveerd</b>
+      ${reservation.naam}, je hebt een ${veldLabel} op ${fmtDate(d.date)} van ${tijdsblokLabel}. Tot dan!
+    </div>
+  `;
+}
+
+function renderAdmin(){
+  const el = document.getElementById("admin-content");
+
+  const datesHtml = state.dates.map(d => {
+    const resForDate = state.reservations.filter(r => r.dateId === d.id);
+    const rowsHtml = resForDate.length ? `
+      <table class="res">
+        <tr><th>Naam</th><th>Team</th><th>Tijd</th><th>Type</th><th>Doeltje</th><th>Telefoon</th><th>E-mail</th><th></th></tr>
+        ${resForDate.map(r => `
+          <tr>
+            <td>${escapeHtml(r.naam)}</td>
+            <td>${escapeHtml(r.team || "—")}</td>
+            <td>${(TIJDSBLOKKEN.find(t => t.id === r.tijdsblok) || {}).label || "—"}</td>
+            <td>${r.type === "half" ? "Half veld" : "Kwart veld"}</td>
+            <td>${escapeHtml(r.goaltje || "—")}</td>
+            <td>${escapeHtml(r.telefoon)}</td>
+            <td>${escapeHtml(r.email || "—")}</td>
+            <td><button class="btn secondary" data-remove-res="${r.id}">Verwijderen</button></td>
+          </tr>
+        `).join("")}
+      </table>
+    ` : `<div class="empty-msg">Nog geen reserveringen voor deze datum.</div>`;
+
+    return `
+      <div class="admin-date" data-date-id="${d.id}">
+        <div class="row" style="grid-template-columns:1fr 220px;">
+          <div>
+            <label>Datum</label>
+            <input type="date" value="${d.date}" data-field="date">
+          </div>
+          <div>
+            <label>Kwart-plekken per tijdsblok</label>
+            <input type="number" min="0" max="4" value="${d.units}" data-field="units">
+          </div>
+        </div>
+        ${rowsHtml}
+      </div>
+    `;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="card">
+      <h2>Prijzen</h2>
+      <div class="row" style="grid-template-columns:1fr 1fr;">
+        <div>
+          <label>Kwart veld (&euro;)</label>
+          <input type="number" min="0" id="price-kwart" value="${state.prices.kwart}">
+        </div>
+        <div>
+          <label>Half veld (&euro;)</label>
+          <input type="number" min="0" id="price-half" value="${state.prices.half}">
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Data en capaciteit</h2>
+      <p class="muted">Pas de drie speeldata aan en het aantal kwart-plekken per tijdsblok (standaard 4: het hele veld). Wijzigingen worden direct opgeslagen zodra je een veld verlaat.</p>
+      ${datesHtml}
+    </div>
+    <div class="danger-zone">
+      <button class="btn secondary" id="reset-all">Alles wissen en opnieuw beginnen</button>
+    </div>
+  `;
+
+  document.getElementById("price-kwart").addEventListener("change", async (e) => {
+    state.prices.kwart = Math.max(0, parseInt(e.target.value || "0", 10));
+    await saveState();
+  });
+  document.getElementById("price-half").addEventListener("change", async (e) => {
+    state.prices.half = Math.max(0, parseInt(e.target.value || "0", 10));
+    await saveState();
+  });
+
+  el.querySelectorAll("[data-field]").forEach(inp => {
+    inp.addEventListener("change", async () => {
+      const dateId = inp.closest(".admin-date").getAttribute("data-date-id");
+      const d = state.dates.find(x => x.id === dateId);
+      const field = inp.getAttribute("data-field");
+      if(field === "date"){
+        d.date = inp.value;
+      } else {
+        d[field] = Math.max(0, parseInt(inp.value || "0", 10));
+      }
+      await saveState();
+      renderAdmin();
+    });
+  });
+
+  el.querySelectorAll("[data-remove-res]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-remove-res");
+      state.reservations = state.reservations.filter(r => r.id !== id);
+      await saveState();
+      renderAdmin();
+    });
+  });
+
+  document.getElementById("reset-all").addEventListener("click", async () => {
+    if(!confirm("Weet je zeker dat je alle data en reserveringen wilt wissen?")) return;
+    state = defaultState();
+    await saveState();
+    renderAdmin();
+  });
+}
+
+function escapeHtml(str){
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+document.getElementById("tab-public").addEventListener("click", () => {
+  document.getElementById("tab-public").classList.add("active");
+  document.getElementById("tab-admin").classList.remove("active");
+  document.getElementById("view-public").style.display = "";
+  document.getElementById("view-admin").style.display = "none";
+});
+document.getElementById("tab-admin").addEventListener("click", async () => {
+  document.getElementById("tab-admin").classList.add("active");
+  document.getElementById("tab-public").classList.remove("active");
+  document.getElementById("view-admin").style.display = "";
+  document.getElementById("view-public").style.display = "none";
+  renderAdmin();
+  document.getElementById("admin-loading").style.display = "none";
+  document.getElementById("admin-content").style.display = "";
+});
+
+(async function init(){
+  await loadState();
+  renderPublic();
+  document.getElementById("public-loading").style.display = "none";
+  document.getElementById("public-content").style.display = "";
+})();
+</script>
+
+</body>
+</html>
