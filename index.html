@@ -30,15 +30,14 @@
     color:var(--ink);
     font-family:"Inter", "Segoe UI", Arial, sans-serif;
     line-height:1.5;
+    position:relative;
   }
   .wrap{max-width:1040px;margin:0 auto;padding:0 clamp(28px, 8vw, 80px) clamp(28px, 8vw, 80px);}
 
   header.hero{
-    background:var(--yellow);
     color:var(--black);
     padding:34px clamp(28px, 8vw, 80px) clamp(28px, 8vw, 80px);
     position:relative;
-    overflow:hidden;
   }
   .hero-photo{
     position:absolute;
@@ -51,7 +50,7 @@
     background-position:center right;
     -webkit-mask-image:linear-gradient(to right, transparent 0%, black 30%);
     mask-image:linear-gradient(to right, transparent 0%, black 30%);
-    z-index:0;
+    z-index:-1;
   }
   @media (max-width:760px){
     .hero-photo{display:none;}
@@ -334,9 +333,9 @@
 </style>
 </head>
 <body>
+<div class="hero-photo"></div>
 
 <header class="hero">
-  <div class="hero-photo"></div>
   <div class="hero-inner">
     <p class="club-name">S.V. WISSEL</p>
     <h1>Partijtje<br>voetbal spelen</h1>
