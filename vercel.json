@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/beheer", "destination": "/index.html" },
+    { "source": "/beheer/", "destination": "/index.html" }
+  ]
+}

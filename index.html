@@ -813,7 +813,7 @@ document.getElementById("tab-public").addEventListener("click", async () => {
   renderPublic();
 });
 
-document.getElementById("tab-admin").addEventListener("click", async () => {
+async function openAdmin(){
   document.getElementById("tab-admin").classList.add("active");
   document.getElementById("tab-public").classList.remove("active");
   document.getElementById("view-admin").style.display = "";
@@ -827,9 +827,18 @@ document.getElementById("tab-admin").addEventListener("click", async () => {
   } else {
     renderLoginForm();
   }
-});
+}
+
+document.getElementById("tab-admin").addEventListener("click", openAdmin);
+
+function isBeheerRoute(){
+  return /\/beheer\/?$/i.test(window.location.pathname);
+}
 
 (async function init(){
+  if(!isBeheerRoute()){
+    document.getElementById("tab-admin").style.display = "none";
+  }
   try{
     await loadPublicData();
     renderPublic();
@@ -838,6 +847,10 @@ document.getElementById("tab-admin").addEventListener("click", async () => {
   }
   document.getElementById("public-loading").style.display = "none";
   document.getElementById("public-content").style.display = "";
+  if(isBeheerRoute()){
+    document.getElementById("tab-admin").style.display = "";
+    await openAdmin();
+  }
 })();
 </script>
 
